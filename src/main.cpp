@@ -91,6 +91,7 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          
 
           /*
           * TODO: Calculate steeering angle and throttle using MPC.
@@ -98,13 +99,38 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+          Eigen::VectorXd ptsx_(ptsx.size());
+          Eigen::VectorXd ptsy_(ptsy.size());
+
+          for (int i = 0; i < ptsx.size(); i++) {
+            double dx = ptsx[i] - px;
+            double dy = ptsy[i] - py;
+
+            double r = sqrt(dx*dx + dy*dy);
+            double alpha_g = atan2(-dy, dx);
+            double alpha_v = alpha_g + psi;
+
+            ptsx_[i] =  r * cos(alpha_v);
+            ptsy_[i] = -r * sin(alpha_v);
+          }
+
+          auto coeffs = polyfit(ptsx_, ptsy_, 3);
+
+          double cte = polyeval(coeffs, px) - py;
+          double epsi = psi - atan(coeffs[1]);
+
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, cte, epsi;
+
+          auto vars = mpc.Solve(state, coeffs);
+
+          double steer_value = vars[6];
+          double throttle_value = vars[7];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
@@ -113,6 +139,18 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
+
+          for (int i = 0; i < mpc.next_path_xs.size(); i++) {
+            double dx = mpc.next_path_xs[i] - px;
+            double dy = mpc.next_path_ys[i] - py;
+
+            double r = sqrt(dx*dx + dy*dy);
+            double alpha_g = atan2(-dy, dx);
+            double alpha_v = alpha_g + psi;
+
+            mpc_x_vals.push_back(r * cos(alpha_v));
+            mpc_y_vals.push_back(-r * sin(alpha_v));
+          }
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
@@ -123,6 +161,10 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          for (int i = 0; i < ptsx_.size(); i++) {
+            next_x_vals.push_back(ptsx_[i]);
+            next_y_vals.push_back(ptsy_[i]);
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;

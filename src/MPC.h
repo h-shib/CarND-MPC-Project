@@ -8,6 +8,13 @@ using namespace std;
 
 class MPC {
  public:
+ 	/*
+ 	* Next paths
+ 	*/
+ 	vector<double> next_path_xs;
+ 	vector<double> next_path_ys;
+
+
   MPC();
 
   virtual ~MPC();
