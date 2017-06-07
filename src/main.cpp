@@ -116,21 +116,23 @@ int main() {
 
           auto coeffs = polyfit(ptsx_, ptsy_, 3);
 
-          double cte = polyeval(coeffs, px) - py;
-          double epsi = psi - atan(coeffs[1]);
+          double cte = polyeval(coeffs, 0);
+          double epsi = -atan(coeffs[1]);
 
           Eigen::VectorXd state(6);
-          state << px, py, psi, v, cte, epsi;
+          state << 0, 0, 0, v, cte, epsi;
 
           auto vars = mpc.Solve(state, coeffs);
 
           double steer_value = vars[6];
           double throttle_value = vars[7];
+          cout << "##steer: " << steer_value << endl << endl;
+          cout << "##steer: " << -steer_value/deg2rad(25) << endl << endl;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value/deg2rad(25);
+          msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
@@ -141,8 +143,8 @@ int main() {
           // the points in the simulator are connected by a Green line
 
           for (int i = 0; i < mpc.next_path_xs.size(); i++) {
-            double dx = mpc.next_path_xs[i] - px;
-            double dy = mpc.next_path_ys[i] - py;
+            double dx = mpc.next_path_xs[i];
+            double dy = mpc.next_path_ys[i];
 
             double r = sqrt(dx*dx + dy*dy);
             double alpha_g = atan2(-dy, dx);
