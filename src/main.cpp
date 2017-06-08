@@ -91,7 +91,6 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-          
 
           /*
           * TODO: Calculate steeering angle and throttle using MPC.
@@ -99,8 +98,9 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          Eigen::VectorXd ptsx_(ptsx.size());
-          Eigen::VectorXd ptsy_(ptsy.size());
+          // transform reference path into vehicle orientation
+          Eigen::VectorXd ptsx_v(ptsx.size()); // x position from vehicle
+          Eigen::VectorXd ptsy_v(ptsy.size()); // y position from vehicle
 
           for (int i = 0; i < ptsx.size(); i++) {
             double dx = ptsx[i] - px;
@@ -110,11 +110,11 @@ int main() {
             double alpha_g = atan2(-dy, dx);
             double alpha_v = alpha_g + psi;
 
-            ptsx_[i] =  r * cos(alpha_v);
-            ptsy_[i] = -r * sin(alpha_v);
+            ptsx_v[i] =  r * cos(alpha_v);
+            ptsy_v[i] = -r * sin(alpha_v);
           }
 
-          auto coeffs = polyfit(ptsx_, ptsy_, 3);
+          auto coeffs = polyfit(ptsx_v, ptsy_v, 3);
 
           double cte = polyeval(coeffs, 0);
           double epsi = -atan(coeffs[1]);
@@ -147,7 +147,7 @@ int main() {
             double dy = mpc.next_path_ys[i];
 
             double r = sqrt(dx*dx + dy*dy);
-            double alpha_g = atan2(-dy, dx);
+            double alpha_g = atan2(dy, dx);
             double alpha_v = alpha_g + psi;
 
             mpc_x_vals.push_back(r * cos(alpha_v));
@@ -163,9 +163,9 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-          for (int i = 0; i < ptsx_.size(); i++) {
-            next_x_vals.push_back(ptsx_[i]);
-            next_y_vals.push_back(ptsy_[i]);
+          for (int i = 0; i < ptsx_v.size(); i++) {
+            next_x_vals.push_back(ptsx_v[i]);
+            next_y_vals.push_back(ptsy_v[i]);
           }
 
           msgJson["next_x"] = next_x_vals;
