@@ -130,22 +130,14 @@ int main() {
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
+          //vector<double> mpc_x_vals;
+          //vector<double> mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
-          for (int i = 0; i < mpc.next_path_xs.size(); i++) {
-            double dx = mpc.next_path_xs[i];
-            double dy = mpc.next_path_ys[i];
-
-            mpc_x_vals.push_back(dx * cos(psi) + dy * sin(psi));
-            mpc_y_vals.push_back(dy * cos(psi) - dx * sin(psi));
-          }
-
-          msgJson["mpc_x"] = mpc_x_vals;
-          msgJson["mpc_y"] = mpc_y_vals;
+          msgJson["mpc_x"] = mpc.next_path_xs;
+          msgJson["mpc_y"] = mpc.next_path_ys;
 
           //Display the waypoints/reference line
           vector<double> next_x_vals;
@@ -153,14 +145,16 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          /*
           for (int i = 0; i < ptsx_v.size(); i++) {
             next_x_vals.push_back(ptsx_v[i]);
             next_y_vals.push_back(ptsy_v[i]);
           }
-
+          */
+          
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
-
+          
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
