@@ -106,12 +106,8 @@ int main() {
             double dx = ptsx[i] - px;
             double dy = ptsy[i] - py;
 
-            double r = sqrt(dx*dx + dy*dy);
-            double alpha_g = atan2(-dy, dx);
-            double alpha_v = alpha_g + psi;
-
-            ptsx_v[i] =  r * cos(alpha_v);
-            ptsy_v[i] = -r * sin(alpha_v);
+            ptsx_v[i] = dx * cos(psi) + dy * sin(psi);
+            ptsy_v[i] = dy * cos(psi) - dx * sin(psi);
           }
 
           auto coeffs = polyfit(ptsx_v, ptsy_v, 3);
@@ -126,8 +122,6 @@ int main() {
 
           double steer_value = vars[6];
           double throttle_value = vars[7];
-          cout << "##steer: " << steer_value << endl << endl;
-          cout << "##steer: " << -steer_value/deg2rad(25) << endl << endl;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -146,12 +140,8 @@ int main() {
             double dx = mpc.next_path_xs[i];
             double dy = mpc.next_path_ys[i];
 
-            double r = sqrt(dx*dx + dy*dy);
-            double alpha_g = atan2(dy, dx);
-            double alpha_v = alpha_g + psi;
-
-            mpc_x_vals.push_back(r * cos(alpha_v));
-            mpc_y_vals.push_back(-r * sin(alpha_v));
+            mpc_x_vals.push_back(dx * cos(psi) + dy * sin(psi));
+            mpc_y_vals.push_back(dy * cos(psi) - dx * sin(psi));
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
