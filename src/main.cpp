@@ -11,6 +11,7 @@
 
 // for convenience
 using json = nlohmann::json;
+const double Lf = 2.67; // the length from front to CoG that has a similar radius.
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -91,6 +92,8 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double delta = j[1]["steering_angle"];
+          double a = j[1]["throttle"];
 
           /*
           * TODO: Calculate steeering angle and throttle using MPC.
@@ -99,8 +102,8 @@ int main() {
           *
           */
           // transform reference path into vehicle orientation
-          Eigen::VectorXd ptsx_v(ptsx.size()); // x position from vehicle
-          Eigen::VectorXd ptsy_v(ptsy.size()); // y position from vehicle
+          Eigen::VectorXd ptsx_v(ptsx.size()); // x position from vehicle coordinates
+          Eigen::VectorXd ptsy_v(ptsy.size()); // y position from vehicle coordinates
 
           for (int i = 0; i < ptsx.size(); i++) {
             double dx = ptsx[i] - px;
@@ -115,8 +118,22 @@ int main() {
           double cte = polyeval(coeffs, 0);
           double epsi = -atan(coeffs[1]);
 
+          // update state with latency
+          double latency = 0.1;
+
+          double x_v   = 0; //   x from vehicle coordinates
+          double y_v   = 0; //   y from vehicle coordinates
+          double psi_v = 0; // psi from vehicle coordinates
+
+          double late_x = x_v + v * cos(psi_v) * latency;
+          double late_y = y_v + v * sin(psi_v) * latency;
+          double late_psi = psi_v - v / Lf * delta * latency;
+          double late_v = v + a * latency;
+          double late_cte = cte + v * sin(psi_v) * latency;
+          double late_epsi = late_psi - atan(coeffs[1] + 2 * coeffs[2] * late_x + 3 * coeffs[3] * late_x * late_x) - (v / Lf * delta * latency);
+
           Eigen::VectorXd state(6);
-          state << 0, 0, 0, v, cte, epsi;
+          state << late_x, late_y, late_psi, late_v, late_cte, late_epsi;
 
           auto vars = mpc.Solve(state, coeffs);
 
