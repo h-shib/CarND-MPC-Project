@@ -5,7 +5,9 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
+// Set the timestep length and duration
+// I tried longer time durations such as N * dt > 1.0, however,
+// it showed excessive trajectory. Finally, I set it to N * dt = 0.6. 
 size_t N = 15;
 double dt = 0.04;
 
@@ -44,15 +46,13 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
+    // implement MPC
     // fg a vector of constraints, x is a vector of constraints.
-    // NOTE: You'll probably go back and forth between this function and
-    // the Solver function below.
 
     // cost
     fg[0] = 0;
 
-    // cost of state
+    // cost for state
     for (int i = 0; i < N; i++) {
       fg[0] += CppAD::pow(vars[cte_start + i] - ref_cte, 2);
       fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
@@ -65,12 +65,13 @@ class FG_eval {
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
 
-    // cost for the gap of control input
+    // cost for the gaps of control input
     for (int i = 0; i < N - 2; i++) {
       fg[0] += 50000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
       fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
+    // shift index by 1 since fg[0] takes cosf
     fg[x_start + 1] = vars[x_start];
     fg[y_start + 1] = vars[y_start];
     fg[psi_start + 1] = vars[psi_start];
@@ -78,10 +79,9 @@ class FG_eval {
     fg[cte_start + 1] = vars[cte_start];
     fg[epsi_start + 1] = vars[epsi_start];
 
-
     // The rest of the constraints
     for (int i = 0; i < N - 1; i++) {
-      // The state at time t+1 .
+      // The state at time t+1.
       AD<double> x1 = vars[x_start + i + 1];
       AD<double> y1 = vars[y_start + i + 1];
       AD<double> psi1 = vars[psi_start + i + 1];
@@ -104,16 +104,7 @@ class FG_eval {
       AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0 * x0 +coeffs[3] * x0 * x0 * x0;
       AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0);
 
-      // Here's `x` to get you started.
-      // The idea here is to constraint this value to be 0.
-      //
-      // Recall the equations for the model:
-      // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
-      // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
-      // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
-      // v_[t+1] = v[t] + a[t] * dt
-      // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
-      // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+      // set next state and control input
       fg[2 + x_start + i] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
@@ -144,13 +135,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   double cte = state[4];
   double epsi = state[5];
 
-  // TODO: Set the number of model variables (includes both states and inputs).
-  // For example: If the state is a 4 element vector, the actuators is a 2
-  // element vector and there are 10 timesteps. The number of variables is:
-  //
-  // 4 * 10 + 2 * 9
+  // Set the number of model variables (includes both states and inputs) and constraints.
   size_t n_vars = N * 6 + (N-1) * 2;
-  // TODO: Set the number of constraints
   size_t n_constraints = N * 6;
 
   // Initial value of the independent variables.
@@ -169,7 +155,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
-  // TODO: Set lower and upper limits for variables.
+
+  // Set lower and upper limits for variables.
   for (int i = 0; i < delta_start; i++) {
     vars_lowerbound[i] = -1.0e19;
     vars_upperbound[i] =  1.0e19;
@@ -211,9 +198,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
 
-  //
-  // NOTE: You don't have to worry about these options
-  //
   // options for IPOPT solver
   std::string options;
   // Uncomment this if you'd like more print information
@@ -254,11 +238,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   next_path_xs = next_xs;
   next_path_ys = next_ys;
 
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-  // creates a 2 element double vector.
+  // Return the first actuator values.
   return {solution.x[x_start + 1], solution.x[y_start + 1],
           solution.x[psi_start + 1], solution.x[v_start + 1],
           solution.x[cte_start + 1], solution.x[epsi_start + 1],
