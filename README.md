@@ -1,5 +1,37 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# MPC Project
+
+## Model description
+### vehicle state
+```
+x    position x (in front and behind direction)
+y    position y (left and right direction)
+psi  vehicle orientation
+v    velocity
+cte  cross track error (distance between vehicle and trajectory)
+epsi error of psi (difference between trajectory orientation and vehicle orientation)
+```
+
+### actuators
+```
+delta vehicle steering angle
+a     vehicle acceleration
+```
+
+### update equations
+```
+x_new    = x1 - (x0 + v0 * cos(psi0) * dt);
+y_new    = y1 - (y0 + v0 * sin(psi0) * dt);
+psi_new  = psi1 - (psi0 + v0 * delta0 / Lf * dt);
+v_new    = v1 - (v0 + a0 * dt);
+cte_new  = cte1 - ((f0 - y0) + (v0 * sin(epsi0) * dt));
+epsi_new = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+```
+
+
+### timesteps length and elapsed duration
+N is the number of the timestep and dt is the duration between each actuation.
+Fewer timesteps were insufficient to compute vehicle orientation in tight corners. I tried some value such as 5 to 10, however, it showed very strong trajectory curve. On the other hand, smaller dt makes vehicle model calculation more accrate. I tried several value and I found I need to set dt at least smaller than 0.05 to accelerate to 60mile/h.
+Finally, I chose N as 15 and dt as 0.04 and it showed me stable trajectory.
 
 ---
 
